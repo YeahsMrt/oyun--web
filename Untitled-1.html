@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Square Dash – Deluxe (Mobil Uyumluluk)</title>
+<style>
+:root{
+  --bg:#0b1024; --fg:#e8ecff; --muted:#9aa3c7; --card:#161b33;
+  --acc:#7c5cff; --good:#3bd671; --bad:#ff5c7c; --gold:#ffd166;
+  --bg1: #0e1230; --bg2: #090d20;
+}
+*{box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto}
+body{overflow:hidden}
+.wrap{max-width:980px;margin:0 auto;padding:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+h1{font-size:18px;margin:0}
+.btn{background:var(--acc);color:#fff;border:0;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(124,92,255,.35);transition:.2s transform}
+.btn:hover{transform:translateY(-1px)}
+.card{background:var(--card);border:1px solid #232a4a;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);position:relative}
+.hud{display:flex;align-items:center;gap:8px;padding:8px 10px;flex-wrap:wrap}
+.tag{display:inline-flex;align-items:center;gap:6px;background:#101532;padding:6px 10px;border-radius:10px;border:1px solid #262d55;font-size:13px}
+#game{display:block;width:100%;aspect-ratio:16/9;border-radius:16px;touch-action:none; background:transparent}
+.footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+/* Menüler */
+.overlay{position:absolute;inset:0;background:rgba(5,8,18,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:16px;z-index:20}
+.title{font-size:34px;font-weight:900;letter-spacing:.5px;text-align:center}
+.panel{background:#0f1430;border:1px solid #26305f;padding:12px 14px;border-radius:12px;min-width:260px}
+.row{display:flex;align-items:center;justify-content:space-between;margin:6px 0;color:#cfd4ff}
+select, .switch{background:#0c1130;color:#e8ecff;border:1px solid #2a3366;border-radius:10px;padding:6px 8px}
+/* Mobil kontroller */
+#controls{position:fixed;bottom:15px;left:15px;display:flex;gap:8px;z-index:10;touch-action:none}
+.circle{width:56px;height:56px;background:#12162a;border:2px solid #2a2f4b;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+#btns{position:fixed;bottom:15px;right:15px;display:flex;flex-direction:column;gap:12px;z-index:10;touch-action:none}
+.btnAct{width:56px;height:56px;background:var(--acc);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;box-shadow:0 4px 12px rgba(124,92,255,.5)}
+/* Level flash */
+.flash{position:absolute;inset:0;border-radius:16px;background:radial-gradient(600px 300px at 50% 50%, rgba(124,92,255,.45), rgba(0,0,0,0));opacity:0;pointer-events:none;transition:opacity .6s}
+.flash.show{opacity:1}
+/* Integrated control buttons (from simpler layout) */
+#controlsPanel {position:absolute;left:50%;transform:translateX(-50%);bottom:10px;display:flex;gap:10px;z-index:30}
+.controlBtn {padding:10px 14px;border-radius:10px;border:none;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--fg);backdrop-filter: blur(6px);box-shadow: 0 6px 18px rgba(0,0,0,.35)}
+.controlBtn.primary { background: var(--acc); color:#fff; box-shadow: 0 8px 22px rgba(124,92,255,.28); }
+.controlBtn.ghost { background: transparent; border:1px solid rgba(255,255,255,0.06); }
+@media (max-width:640px){
+  #controls { left:8px; bottom:72px; gap:6px }
+  .circle{width:48px;height:48px;font-size:16px}
+  #btns{right:8px;bottom:72px}
+  .controlBtn{padding:8px 10px;font-size:13px}
+}
+/* Yeni ekleme: mobilde landscape zorunluluğu */
+body.landscape-warning::before {
+  content: "Lütfen cihazı yatay çevirin";
+  position: fixed;
+  inset: 0;
+  background: #0b1024;
+  color: #fff;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  text-align: center;
+  padding: 20px;
+}
+/* Tam ekran mobil, header gizli */
+body.landscape {
+  margin:0;
+  padding:0;
+  overflow:hidden;
+}
+body.landscape header {
+  display:none;
+}
+
+
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>Square Dash <span style="opacity:.6">– Deluxe</span></h1>
+<div><button id="btnStart" class="btn" style="display:none">Başlat / Yeniden Başlat</button></div>
+</header>
+<div class="card" style="position:relative">
+<div class="hud">
+<span class="tag">⚡ Zorluk: <strong id="lvl">1</strong></span>
+<span class="tag">⭐ Skor: <strong id="score">0</strong></span>
+<span class="tag">❤️ Can: <strong id="hp">3</strong></span>
+<span class="tag">🔥 Seri: <strong id="streak">0</strong></span>
+<span class="tag">🏆 En İyi: <strong id="best">0</strong></span>
+<span class="tag">🎵 Ses: <strong id="sndState">Açık</strong></span>
+</div>
+<canvas id="game" width="960" height="540"></canvas>
+<div id="menu" class="overlay">
+<div class="title">Square Dash</div>
+<div class="panel">
+<div class="row"><span>Tema</span>
+<select id="themeSel">
+<option value="default">Neon Gece</option>
+<option value="sunset">Gün Batımı</option>
+<option value="mint">Nane Taze</option>
+</select></div>
+<div class="row"><span>Ses</span><button id="toggleSnd" class="btn" style="padding:6px 10px">Aç/Kapa</button></div>
+</div>
+<button id="menuStart" class="btn" style="font-size:18px">OYNA</button>
+<div style="opacity:.7">WASD / Ok Tuşları veya dokunmatik düğmeler</div>
+</div>
+<div id="gameover" class="overlay" style="display:none">
+<div class="title">Oyun Bitti</div>
+<div>Skor: <strong id="finalScore">0</strong> · En İyi: <strong id="finalBest">0</strong></div>
+<button id="again" class="btn">Tekrar Oyna</button>
+</div>
+<div id="flash" class="flash"></div>
+<div id="controlsPanel" aria-hidden="false">
+<button id="startBtn" class="controlBtn primary">Start</button>
+<button id="restartBtn" class="controlBtn">Restart</button>
+<button id="pauseBtn" class="controlBtn">Pause</button>
+<button id="resumeBtn" class="controlBtn" style="display:none">Resume</button>
+</div>
+</div>
+<div class="footer">
+<div>Kontroller: WASD / Ok tuşları · <b>P</b> durdur · <b>R</b> yeniden başlat · Mobil düğmeler</div>
+<div>Power-up'lar: 💚 Can · ✨ x2 · ⚡ Hız</div>
+</div>
+</div>
+<div id="controls">
+<div class="circle" data-dir="left">◀</div>
+<div class="circle" data-dir="up">▲</div>
+<div class="circle" data-dir="down">▼</div>
+<div class="circle" data-dir="right">▶</div>
+</div>
+<div id="btns">
+<div class="btnAct" data-act="pause">⏸</div>
+<div class="btnAct" data-act="restart">⟳</div>
+</div>
+<script>
+// Landscape kontrolü
+function checkOrientation(){
+  if(window.innerHeight > window.innerWidth){
+    document.body.classList.add('landscape-warning');
+  } else {
+    document.body.classList.remove('landscape-warning');
+    fitCanvas();
+  }
+}
+window.addEventListener('resize', checkOrientation);
+window.addEventListener('load', checkOrientation);
+
+function fitCanvas(){
+  const parent = canvas.parentElement;
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  // Yatay modda canvas parent genişliğini kaplasın
+  const width = parent.clientWidth * dpr;
+  const height = width * 9/16; // 16:9 oranı
+  canvas.width = width;
+  canvas.height = height;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  // oyuncu pozisyonunu güncelle
+  if(world.player){
+    world.player.x = clamp(world.player.x, 0, canvas.width - world.player.w);
+    world.player.y = clamp(world.player.y, 0, canvas.height - world.player.h);
+  }
+}
+
+// cihaz yönüne göre uyarı ve canvas ayarı
+function checkOrientation(){
+  if(window.innerHeight > window.innerWidth){
+    document.body.classList.add('landscape-warning');
+  } else {
+    document.body.classList.remove('landscape-warning');
+    fitCanvas();
+  }
+}
+window.addEventListener('resize', checkOrientation);
+window.addEventListener('load', checkOrientation);
+
+function fitCanvas(){
+  const parent = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+
+  // tam ekran yatay mod
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+
+  // 16:9 oranını koru, ekranı tamamen kaplasın
+  if(width/height > 16/9){
+    width = height * 16/9;
+  } else {
+    height = width * 9/16;
+  }
+
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  // oyuncu pozisyonunu yeniden clamp et
+  if(world.player){
+    world.player.x = clamp(world.player.x, 0, width - world.player.w);
+    world.player.y = clamp(world.player.y, 0, height - world.player.h);
+  }
+}
+
+// yön kontrolü
+function checkOrientation(){
+  if(window.innerHeight > window.innerWidth){
+    document.body.classList.add('landscape-warning');
+  } else {
+    document.body.classList.remove('landscape-warning');
+    fitCanvas();
+  }
+}
+
+window.addEventListener('resize', checkOrientation);
+window.addEventListener('load', checkOrientation);
+
+
+
+
+// ---------- Temalar ----------
+const themes = {
+  default:{ bg1:'#0e1230', bg2:'#090d20', acc:'#7c5cff', good:'#3bd671', bad:'#ff5c7c', gold:'#ffd166' },
+  sunset: { bg1:'#2f1439', bg2:'#0f0a1a', acc:'#ff7aa2', good:'#ffcf56', bad:'#ff5c7c', gold:'#ffcf56' },
+  mint:   { bg1:'#0b2022', bg2:'#061013', acc:'#36d1c4', good:'#8df5a6', bad:'#ff5c7c', gold:'#f5ff8d' },
+};
+function applyTheme(name){
+  const t = themes[name]||themes.default;
+  document.documentElement.style.setProperty('--acc', t.acc);
+  document.documentElement.style.setProperty('--good', t.good);
+  document.documentElement.style.setProperty('--bad', t.bad);
+  document.documentElement.style.setProperty('--gold', t.gold);
+  document.documentElement.style.setProperty('--bg1', t.bg1);
+  document.documentElement.style.setProperty('--bg2', t.bg2);
+}
+
+// ---------- Basit Ses Motoru (WebAudio) ----------
+let audioCtx = null, sndEnabled = true;
+function ensureAudio(){ if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); } }
+function beep(type='square', freq=440, dur=0.08, vol=0.15){ if(!sndEnabled) return; ensureAudio(); const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=vol; o.connect(g); g.connect(audioCtx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur); o.stop(audioCtx.currentTime+dur); }
+const sfx={ star(){beep('triangle',760,0.07,0.12)}, hit(){beep('sawtooth',140,0.12,0.2)}, level(){beep('square',520,0.12,0.18); setTimeout(()=>beep('square',660,0.12,0.18),90) }, life(){beep('sine',880,0.15,0.2)}, speed(){beep('triangle',980,0.1,0.18)}, mult(){beep('square',420,0.1,0.18)} };
+
+// ---------- Canvas ve UI ----------
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const el = (id)=>document.getElementById(id);
+const elLvl=el('lvl'), elScore=el('score'), elHp=el('hp'), elBest=el('best'), elStreak=el('streak'), elSnd=el('sndState');
+const btnStartOld=el('btnStart'); // hidden original
+const menu=el('menu'), gameover=el('gameover');
+const menuStart=el('menuStart'), again=el('again');
+const finalScore=el('finalScore'), finalBest=el('finalBest');
+const flashEl=el('flash');
+const themeSel=el('themeSel');
+const toggleSnd=el('toggleSnd');
+
+// Integrated control buttons (from simple UI)
+const startBtn = el('startBtn');
+const restartBtn = el('restartBtn');
+const pauseBtn = el('pauseBtn');
+const resumeBtn = el('resumeBtn');
+
+const store = {
+  get best(){ return Number(localStorage.getItem('sq_best')||0); },
+  set best(v){ localStorage.setItem('sq_best', String(v)); },
+  get theme(){ return localStorage.getItem('sq_theme')||'default'; },
+  set theme(v){ localStorage.setItem('sq_theme', v); }
+};
+applyTheme(store.theme); themeSel.value = store.theme;
+
+// ---------- Input ----------
+const keys = new Set();
+addEventListener('keydown',e=>{ keys.add(e.key.toLowerCase()); if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault(); });
+addEventListener('keyup',e=> keys.delete(e.key.toLowerCase()));
+const dirs={up:false,down:false,left:false,right:false};
+document.querySelectorAll('#controls .circle').forEach(btn=>{
+  const dir = btn.dataset.dir;
+  const on = ()=>{ dirs[dir]=true; };
+  const off= ()=>{ dirs[dir]=false; };
+  btn.addEventListener('touchstart', on, {passive:true}); btn.addEventListener('touchend', off);
+  btn.addEventListener('mousedown', on); document.addEventListener('mouseup', off);
+});
+document.querySelectorAll('#btns .btnAct').forEach(btn=>{
+  btn.addEventListener('touchstart',()=>{ if(btn.dataset.act==='pause'){ togglePause(); } if(btn.dataset.act==='restart'){ start(); } });
+  btn.addEventListener('click',()=>{ if(btn.dataset.act==='pause'){ togglePause(); } if(btn.dataset.act==='restart'){ start(); } });
+});
+
+toggleSnd.onclick = ()=>{ sndEnabled=!sndEnabled; elSnd.textContent = sndEnabled? 'Açık':'Kapalı'; if(sndEnabled) ensureAudio(); };
+menuStart.onclick = ()=> start();
+again.onclick = ()=> start();
+addEventListener('keypress',e=>{ const k=e.key.toLowerCase(); if(k==='p'){ togglePause(); } if(k==='r'){ start(); }});
+
+themeSel.onchange = ()=>{ store.theme = themeSel.value; applyTheme(store.theme); };
+
+// ---------- Oyun Dünyası ----------
+const rand=(a,b)=>Math.random()*(b-a)+a;
+const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+
+const world = {
+  reset(){
+    this.t=0; this.level=1; this.hp=3; this.score=0; this.mult=1; this.streak=0; this.paused=false; this.alive=true; this.levelTimer=0; this.speedBoost=0;
+    this.player={
+      x:canvas.width*0.15,
+      y:canvas.height*0.5 - 11, // Yüksekliğin tam ortası (h/2 kadar yukarıdan başlat)
+      w:22,h:22,spd:260,dx:0,dy:0,ifr:0
+    };
+    this.stars=[]; this.enemies=[]; this.items=[]; this.bg=[];
+    for(let i=0;i<120;i++){ this.bg.push({x:rand(0,canvas.width), y:rand(0,canvas.height), r:rand(0.5,1.8), v:rand(5,18)}); }
+    this.spawnStar();
+    menu.style.display='none'; gameover.style.display='none';
+    updateHud();
+  },
+  spawnStar(){ const m=40; this.stars.push({x:rand(canvas.width*0.35, canvas.width-m), y:rand(m,canvas.height-m), r:8, life:8}); },
+  spawnEnemy(){ const s=rand(14,30), y=rand(s,canvas.height-s), v=rand(160,220)+this.level*10; this.enemies.push({x:canvas.width+s,y,w:s,h:s,vx:-v}); },
+  spawnItem(){ // power-ups
+    const types=['life','mult','speed'];
+    const type = types[Math.floor(Math.random()*types.length)];
+    const y=rand(30,canvas.height-30); const x=rand(canvas.width*0.45,canvas.width-40);
+    this.items.push({x,y,type,r:10,life:10});
+  }
+};
+
+function updateHud(){
+  elLvl.textContent=world.level; elScore.textContent=Math.floor(world.score); elHp.textContent=world.hp; elStreak.textContent=world.streak; elBest.textContent=store.best; elSnd.textContent=sndEnabled?'Açık':'Kapalı';
+}
+
+function aabb(a,b){ return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+
+function step(dt){
+  if(world.paused || !world.alive){ draw(); return; }
+  world.t += dt; world.levelTimer += dt;
+
+  // Zorluk ve spawn hızları
+  if(world.levelTimer>9 && world.level<99){ world.level++; world.levelTimer=0; levelFlash(); sfx.level(); if(Math.random()<0.9) world.spawnItem(); }
+  if(Math.random() < (0.7 + world.level*0.02) * dt){ world.spawnEnemy(); }
+
+  // Oyuncu hareketi
+  const p=world.player; p.dx=0; p.dy=0;
+  if(keys.has('w')||keys.has('arrowup')||dirs.up) p.dy -= 1;
+  if(keys.has('s')||keys.has('arrowdown')||dirs.down) p.dy += 1;
+  if(keys.has('a')||keys.has('arrowleft')||dirs.left) p.dx -= 1;
+  if(keys.has('d')||keys.has('arrowright')||dirs.right) p.dx += 1;
+  const len=Math.hypot(p.dx,p.dy) || 1;
+  const spd = p.spd * (world.speedBoost>0?1.6:1);
+  p.x += (p.dx/len) * spd * dt;
+  p.y += (p.dy/len) * spd * dt;
+  p.x = clamp(p.x, 0, canvas.width-p.w); p.y = clamp(p.y, 0, canvas.height-p.h);
+  if(p.ifr>0) p.ifr -= dt;
+  if(world.speedBoost>0) world.speedBoost -= dt;
+
+  // Arkaplan yıldızları
+  for(const b of world.bg){ b.x -= b.v*dt; if(b.x<0) { b.x=canvas.width; b.y=rand(0,canvas.height);} }
+
+  // Düşmanlar
+  for(let i=world.enemies.length-1;i>=0;i--){ const e=world.enemies[i]; e.x += e.vx*dt; if(e.x<-e.w-10){ world.enemies.splice(i,1);} else if(p.ifr<=0 && aabb(p,e)){ world.hp--; world.streak=0; p.ifr=1.2; sfx.hit(); if(world.hp<=0){ die(); } updateHud(); } }
+
+  // Yıldızlar → puan
+  for(let i=world.stars.length-1;i>=0;i--){ const s=world.stars[i]; s.life -= dt; if(s.life<=0){ world.stars.splice(i,1); world.spawnStar(); continue; }
+    const cx=s.x, cy=s.y, r=s.r; const rx=Math.max(p.x, Math.min(cx, p.x+p.w)); const ry=Math.max(p.y, Math.min(cy, p.y+p.h)); const hit=((cx-rx)**2 + (cy-ry)**2) <= r*r;
+    if(hit){ world.score += (5 + world.level) * world.mult; world.streak++; sfx.star(); if(world.streak%5===0) { world.hp=Math.min(5, world.hp+1); sfx.life(); }
+      world.stars.splice(i,1); world.spawnStar(); updateHud(); }
+  }
+
+  // Power-ups
+  for(let i=world.items.length-1;i>=0;i--){ const it=world.items[i]; it.life -= dt; if(it.life<=0){ world.items.splice(i,1); continue; }
+    const hit = p.x < it.x+16 && p.x+p.w > it.x-16 && p.y < it.y+16 && p.y+p.h > it.y-16;
+    if(hit){ if(it.type==='life'){ world.hp=Math.min(5,world.hp+1); sfx.life(); }
+      if(it.type==='mult'){ world.mult = 2; setTimeout(()=>world.mult=1, 6000); sfx.mult(); }
+      if(it.type==='speed'){ world.speedBoost=5; sfx.speed(); }
+      world.items.splice(i,1); updateHud(); }
+  }
+
+  draw();
+}
+
+function die(){
+  world.alive=false;
+  finalScore.textContent = Math.floor(world.score);
+  if(world.score>store.best){ store.best= Math.floor(world.score); }
+  finalBest.textContent = store.best;
+  elBest.textContent = store.best;
+  gameover.style.display='flex';
+  // reflect buttons
+  updateControlButtonsOnStop();
+}
+
+function levelFlash(){ flashEl.classList.add('show'); setTimeout(()=>flashEl.classList.remove('show'), 260); }
+
+function draw(){
+  // Arka plan
+  const grd = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  grd.addColorStop(0, getComputedStyle(document.documentElement).getPropertyValue('--bg1')||'#0e1230');
+  grd.addColorStop(1, getComputedStyle(document.documentElement).getPropertyValue('--bg2')||'#090d20');
+  ctx.fillStyle = grd; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Yıldızlar
+  ctx.fillStyle='rgba(255,255,255,.6)';
+  for(const b of world.bg){ ctx.globalAlpha = 0.25 + b.r/2; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); }
+  ctx.globalAlpha=1;
+
+  // İnce grid
+  ctx.strokeStyle='rgba(255,255,255,.03)'; ctx.lineWidth=1; ctx.beginPath();
+  for(let x=0;x<canvas.width;x+=40){ ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); }
+  for(let y=0;y<canvas.height;y+=40){ ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); }
+  ctx.stroke();
+
+  // Yıldız (puan)
+  for(const s of world.stars){ ctx.beginPath(); ctx.arc(s.x,s.y, s.r + Math.sin(performance.now()/200)*1.2, 0, Math.PI*2); ctx.fillStyle = getCss('--good','#3bd671'); ctx.fill(); ctx.beginPath(); ctx.arc(s.x,s.y, s.r*2.3, 0, Math.PI*2); ctx.strokeStyle = 'rgba(59,214,113,.18)'; ctx.stroke(); }
+
+  // Power-ups
+  for(const it of world.items){ ctx.save(); ctx.translate(it.x,it.y); let col = getCss('--gold','#ffd166'); if(it.type==='life') col=getCss('--good','#3bd671'); if(it.type==='speed') col=getCss('--acc','#7c5cff'); ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0, 12 + Math.sin(performance.now()/300)*1.2, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha=.35; ctx.beginPath(); ctx.arc(0,0, 20, 0, Math.PI*2); ctx.strokeStyle=col; ctx.stroke(); ctx.restore(); }
+
+  // Düşmanlar
+  for(const e of world.enemies){ ctx.fillStyle = getCss('--bad','#ff5c7c'); ctx.fillRect(e.x,e.y,e.w,e.h); ctx.strokeStyle='rgba(255,92,124,.22)'; ctx.strokeRect(e.x-2,e.y-2,e.w+4,e.h+4); }
+
+  // Oyuncu
+  const p=world.player; ctx.save(); ctx.translate(p.x+p.w/2,p.y+p.h/2); const wobble=Math.sin(performance.now()/120)*0.15; ctx.rotate(wobble); ctx.fillStyle = p.ifr>0 ? 'rgba(124,92,255,.6)' : getCss('--acc','#7c5cff'); ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+
+  // Overlay (pause)
+  if(world.paused){
+    ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#e6e6f0'; ctx.textAlign='center'; ctx.font='700 28px ui-sans-serif'; ctx.fillText('DURAKLATILDI', canvas.width/2, canvas.height/2-20);
+    ctx.font='500 16px ui-sans-serif'; ctx.fillText('P: devam · R: yeniden', canvas.width/2, canvas.height/2+18);
+  }
+}
+
+function getCss(varName, fallback){ const v=getComputedStyle(document.documentElement).getPropertyValue(varName); return v && v.trim()? v.trim(): fallback; }
+
+// ---------- Döngü ----------
+let last=0, raf;
+function loop(ts){ const dt=Math.min(0.033, (ts-last)/1000); last=ts; step(dt); raf=requestAnimationFrame(loop); }
+function start(){
+  // start or restart game
+  world.reset();
+  cancelAnimationFrame(raf);
+  last=performance.now();
+  world.paused=false;
+  world.alive=true;
+  loop(last);
+  updateControlButtonsOnStart();
+}
+
+// ---------- Control buttons wiring ----------
+let gameHasStarted = false;
+startBtn.addEventListener('click', ()=>{
+  start();
+  gameHasStarted = true;
+  // hide old menu if visible
+  menu.style.display='none';
+});
+restartBtn.addEventListener('click', ()=>{
+  start();
+  gameHasStarted = true;
+});
+pauseBtn.addEventListener('click', ()=>{ world.paused = true; updateControlButtonsOnPause(); });
+resumeBtn.addEventListener('click', ()=>{ if(world.alive){ world.paused=false; updateControlButtonsOnResume(); last=performance.now(); loop(last); } });
+
+function togglePause(){
+  if(!world.alive) return;
+  world.paused = !world.paused;
+  if(world.paused){ updateControlButtonsOnPause(); } else { updateControlButtonsOnResume(); last=performance.now(); loop(last); }
+}
+
+// update button visibility based on state
+function updateControlButtonsOnStart(){
+  startBtn.style.display = 'none';
+  restartBtn.style.display = 'inline-block';
+  pauseBtn.style.display = 'inline-block';
+  resumeBtn.style.display = 'none';
+  menu.style.display = 'none';
+  gameover.style.display = 'none';
+}
+function updateControlButtonsOnPause(){
+  pauseBtn.style.display = 'none';
+  resumeBtn.style.display = 'inline-block';
+}
+function updateControlButtonsOnResume(){
+  pauseBtn.style.display = 'inline-block';
+  resumeBtn.style.display = 'none';
+}
+function updateControlButtonsOnStop(){
+  // called when die()
+  startBtn.style.display = 'inline-block';
+  restartBtn.style.display = 'inline-block';
+  pauseBtn.style.display = 'none';
+  resumeBtn.style.display = 'none';
+}
+
+// ---------- Canvas boyutlandırma (cihaz değişimlerinde keskinlik kaybı olmasın) ----------
+function fitCanvas(){
+  // keep aspect ratio but scale to parent width; use devicePixelRatio for crispness
+  const rect = canvas.getBoundingClientRect();
+  // in case canvas has no size yet, base on parent card width and aspect ratio 16:9
+  let parent = canvas.parentElement;
+  if(rect.width === 0){
+    const cardRect = parent.getBoundingClientRect();
+    const targetWidth = Math.min(cardRect.width - 24, 960);
+    rect.width = targetWidth;
+    rect.height = targetWidth * 9/16;
+  }
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  const width = Math.max(320, Math.floor(rect.width * dpr));
+  const height = Math.max(180, Math.floor((rect.width * 9/16) * dpr));
+  canvas.width = width;
+  canvas.height = height;
+  // reset transform so drawing coordinates match CSS pixels
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  // update player's positions relative to new canvas
+  if(world.player) {
+    world.player.x = clamp(world.player.x, 0, canvas.width - world.player.w);
+    world.player.y = clamp(world.player.y, 0, canvas.height - world.player.h);
+  }
+}
+new ResizeObserver(fitCanvas).observe(canvas);
+fitCanvas();
+
+// ensure canvas theme vars initial
+applyTheme(store.theme);
+
+// if menu start is used initially, also show Start button in control panel
+menu.style.display='flex';
+startBtn.style.display = 'inline-block';
+restartBtn.style.display = 'inline-block';
+pauseBtn.style.display = 'none';
+resumeBtn.style.display = 'none';
+
+// ensure old GUI start button (hidden) calls same
+btnStartOld.onclick = ()=> { startBtn.click(); };
+
+// reflect stored best on load
+elBest.textContent = store.best;
+
+// convenience: also wire keyboard shortcuts to control buttons
+addEventListener('keydown', (e)=>{
+  if(e.key.toLowerCase() === 'p'){ togglePause(); }
+  if(e.key.toLowerCase() === 'r'){ start(); }
+});
+
+// recompute world dimensions if needed when resizing entire window
+window.addEventListener('resize', ()=>{
+  fitCanvas();
+  // reposition background particles proportionally for nicer visuals
+  if(world.bg && world.bg.length){
+    for(const b of world.bg){ b.x = Math.min(b.x, canvas.width); b.y = Math.min(b.y, canvas.height); }
+  }
+});
+
+</script>
+</body>
+
+</html>
+
+</script>
+</body>
+</html>
